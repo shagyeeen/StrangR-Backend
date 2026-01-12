@@ -57,6 +57,9 @@ function pairUsers(socket, other) {
   socket.room = room;
   other.room = room;
 
+  socket.emit("partner", { username: other.username });
+  other.emit("partner", { username: socket.username });
+
   io.to(room).emit("message", {
     username: "StrangR",
     msg: "You are now chatting on StrangR"
@@ -80,9 +83,10 @@ io.on("connection", (socket) => {
   }
 
   /* -------- JOIN -------- */
-socket.on("join", () => {
+socket.on("join", (username) => {
   console.log("Join request from:", socket.id);
 
+  socket.username = username;
   leaveRoom(socket);
 
   if (waitingUser && waitingUser.id !== socket.id) {
