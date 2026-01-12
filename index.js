@@ -12,16 +12,22 @@ const io = new Server(server, {
 });
 
 let waitingUser = null;
-const bannedIPs = new Map(); // ip → timestamp
+const reports = {}; // { ip: count }
+const bannedUsers = {}; // { ip: banExpiryTimestamp }
 
 /* ================= HELPERS ================= */
 
-function isBanned(ip) {
-  const banTime = bannedIPs.get(ip);
-  if (!banTime) return false;
+function getIP(socket) {
+  return socket.handshake.headers["x-forwarded-for"]?.split(",")[0]
+    || socket.handshake.address;
+}
 
-  if (Date.now() - banTime > 10 * 60 * 1000) {
-    bannedIPs.delete(ip); // 10 mins ban
+function isBanned(ip) {
+  if (!bannedUsers[ip]) return false;
+
+  if (Date.now() > bannedUsers[ip]) {
+    delete bannedUsers[ip]; // ban expired
+    delete reports[ip];
     return false;
   }
   return true;
@@ -62,12 +68,12 @@ function pairUsers(socket, other) {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  const ip = socket.handshake.address;
+  const ip = getIP(socket);
 
   if (isBanned(ip)) {
     socket.emit("message", {
       username: "StrangR",
-      msg: "You are temporarily banned."
+      msg: "You are temporarily banned due to reports. Try again later."
     });
     socket.disconnect();
     return;
@@ -139,9 +145,22 @@ socket.on("join", () => {
 
   /* -------- REPORT -------- */
   socket.on("report", () => {
-    const ip = socket.handshake.address;
-    bannedIPs.set(ip, Date.now());
-    socket.disconnect();
+    const ip = getIP(socket);
+
+    reports[ip] = (reports[ip] || 0) + 1;
+
+    console.log(`Report on IP ${ip}: ${reports[ip]}`);
+
+    if (reports[ip] >= 3) {
+      bannedUsers[ip] = Date.now() + (10 * 60 * 1000); // 10 min ban
+
+      socket.emit("message", {
+        username: "StrangR",
+        msg: "You have been temporarily banned due to multiple reports."
+      });
+
+      socket.disconnect();
+    }
   });
 
   /* -------- DISCONNECT -------- */
