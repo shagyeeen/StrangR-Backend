@@ -29,7 +29,15 @@ function isBanned(ip) {
 
 function leaveRoom(socket) {
   if (socket.room) {
-    socket.leave(socket.room);
+    const room = socket.room;
+
+    // notify the other user
+    socket.to(room).emit("message", {
+      username: "StrangR",
+      msg: "Stranger has left the chat"
+    });
+
+    socket.leave(room);
     socket.room = null;
   }
 }
@@ -86,29 +94,27 @@ socket.on("join", () => {
 
 
   /* -------- NEXT STRANGER -------- */
-socket.on("next", () => {
-  console.log("Next requested by:", socket.id);
+  socket.on("next", () => {
+    console.log("Next requested by:", socket.id);
 
-  leaveRoom(socket);
+    leaveRoom(socket); // this now sends "Stranger has left"
 
-  // If this socket was already waiting, clear it
-  if (waitingUser && waitingUser.id === socket.id) {
-    waitingUser = null;
-  }
+    if (waitingUser === socket) {
+      waitingUser = null;
+    }
 
-  // Pair ONLY if waitingUser exists AND is NOT same socket
-  if (waitingUser && waitingUser.id !== socket.id) {
-    const other = waitingUser;
-    waitingUser = null;
-    pairUsers(socket, other);
-  } else {
-    waitingUser = socket;
-    socket.emit("message", {
-      username: "StrangR",
-      msg: "Waiting for a stranger..."
-    });
-  }
-});
+    if (waitingUser && waitingUser.id !== socket.id) {
+      const other = waitingUser;
+      waitingUser = null;
+      pairUsers(socket, other);
+    } else {
+      waitingUser = socket;
+      socket.emit("message", {
+        username: "StrangR",
+        msg: "Waiting for a stranger..."
+      });
+    }
+  });
 
 
   /* -------- MESSAGE -------- */
