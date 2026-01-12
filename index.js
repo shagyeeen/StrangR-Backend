@@ -12,8 +12,20 @@ const io = new Server(server, {
 });
 
 let waitingUser = null;
+const bannedIPs = new Map(); // ip → timestamp
 
 /* ================= HELPERS ================= */
+
+function isBanned(ip) {
+  const banTime = bannedIPs.get(ip);
+  if (!banTime) return false;
+
+  if (Date.now() - banTime > 10 * 60 * 1000) {
+    bannedIPs.delete(ip); // 10 mins ban
+    return false;
+  }
+  return true;
+}
 
 function leaveRoom(socket) {
   if (socket.room) {
@@ -41,6 +53,17 @@ function pairUsers(socket, other) {
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
+
+  const ip = socket.handshake.address;
+
+  if (isBanned(ip)) {
+    socket.emit("message", {
+      username: "StrangR",
+      msg: "You are temporarily banned."
+    });
+    socket.disconnect();
+    return;
+  }
 
   /* -------- JOIN -------- */
 socket.on("join", () => {
@@ -93,6 +116,26 @@ socket.on("next", () => {
     if (socket.room) {
       io.to(socket.room).emit("message", data);
     }
+  });
+
+  /* -------- TYPING -------- */
+  socket.on("typing", () => {
+    if (socket.room) {
+      socket.to(socket.room).emit("typing");
+    }
+  });
+
+  socket.on("stop_typing", () => {
+    if (socket.room) {
+      socket.to(socket.room).emit("stop_typing");
+    }
+  });
+
+  /* -------- REPORT -------- */
+  socket.on("report", () => {
+    const ip = socket.handshake.address;
+    bannedIPs.set(ip, Date.now());
+    socket.disconnect();
   });
 
   /* -------- DISCONNECT -------- */
