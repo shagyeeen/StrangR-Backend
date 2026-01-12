@@ -34,7 +34,7 @@ function leaveRoom(socket) {
     // notify the other user
     socket.to(room).emit("message", {
       username: "StrangR",
-      msg: "Stranger has left the chat"
+      msg: "StrangR user has left the chat"
     });
 
     socket.leave(room);
@@ -53,7 +53,7 @@ function pairUsers(socket, other) {
 
   io.to(room).emit("message", {
     username: "StrangR",
-    msg: "You are now chatting with a stranger"
+    msg: "You are now chatting on StrangR"
   });
 }
 
@@ -87,7 +87,7 @@ socket.on("join", () => {
     waitingUser = socket;
     socket.emit("message", {
       username: "StrangR",
-      msg: "Waiting for a stranger..."
+      msg: "Waiting for StrangR..."
     });
   }
 });
@@ -111,7 +111,7 @@ socket.on("join", () => {
       waitingUser = socket;
       socket.emit("message", {
         username: "StrangR",
-        msg: "Waiting for a stranger..."
+        msg: "Waiting for StrangR..."
       });
     }
   });
