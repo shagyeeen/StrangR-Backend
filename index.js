@@ -43,46 +43,50 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   /* -------- JOIN -------- */
-  socket.on("join", () => {
-    console.log("Join request from:", socket.id);
+socket.on("join", () => {
+  console.log("Join request from:", socket.id);
 
-    leaveRoom(socket);
+  leaveRoom(socket);
 
-    if (waitingUser && waitingUser.id !== socket.id) {
-      const other = waitingUser;
-      waitingUser = null;
-      pairUsers(socket, other);
-    } else {
-      waitingUser = socket;
-      socket.emit("message", {
-        username: "StrangR",
-        msg: "Waiting for a stranger..."
-      });
-    }
-  });
+  if (waitingUser && waitingUser.id !== socket.id) {
+    const other = waitingUser;
+    waitingUser = null;
+    pairUsers(socket, other);
+  } else {
+    waitingUser = socket;
+    socket.emit("message", {
+      username: "StrangR",
+      msg: "Waiting for a stranger..."
+    });
+  }
+});
+
 
   /* -------- NEXT STRANGER -------- */
-  socket.on("next", () => {
-    console.log("Next requested by:", socket.id);
+socket.on("next", () => {
+  console.log("Next requested by:", socket.id);
 
-    leaveRoom(socket);
+  leaveRoom(socket);
 
-    if (waitingUser === socket) {
-      waitingUser = null;
-    }
+  // If this socket was already waiting, clear it
+  if (waitingUser && waitingUser.id === socket.id) {
+    waitingUser = null;
+  }
 
-    if (waitingUser) {
-      const other = waitingUser;
-      waitingUser = null;
-      pairUsers(socket, other);
-    } else {
-      waitingUser = socket;
-      socket.emit("message", {
-        username: "StrangR",
-        msg: "Waiting for a stranger..."
-      });
-    }
-  });
+  // Pair ONLY if waitingUser exists AND is NOT same socket
+  if (waitingUser && waitingUser.id !== socket.id) {
+    const other = waitingUser;
+    waitingUser = null;
+    pairUsers(socket, other);
+  } else {
+    waitingUser = socket;
+    socket.emit("message", {
+      username: "StrangR",
+      msg: "Waiting for a stranger..."
+    });
+  }
+});
+
 
   /* -------- MESSAGE -------- */
   socket.on("message", (data) => {
